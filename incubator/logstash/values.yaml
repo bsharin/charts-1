@@ -7,8 +7,8 @@ updateStrategy:
   type: RollingUpdate
 
 image:
-  repository: docker.elastic.co/logstash/logstash-oss
-  tag: 6.2.2
+  repository: 10.0.211.103:6000/logstash-oss
+  tag: 6.2.4
   pullPolicy: IfNotPresent
 
 service:
@@ -19,33 +19,33 @@ service:
     # service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
     # service.beta.kubernetes.io/aws-load-balancer-internal: "true"
   ports:
-    # syslog-udp:
-    #   port: 1514
-    #   targetPort: syslog-udp
-    #   protocol: UDP
+    syslog-udp:
+      port: 5141
+      targetPort: syslog-udp
+      protocol: UDP
     # syslog-tcp:
     #   port: 1514
     #   targetPort: syslog-tcp
     #   protocol: TCP
-    beats:
-      port: 5044
-      targetPort: beats
-      protocol: TCP
+    # beats:
+    #   port: 5044
+    #   targetPort: beats
+    #   protocol: TCP
     # http:
     #  port: 8080
     #  targetPort: http
     #  protocol: TCP
     # loadBalancerIP: 10.0.0.1
 ports:
-  # - name: syslog-udp
-  #   containerPort: 1514
-  #   protocol: UDP
+  - name: syslog-udp
+    containerPort: 5141
+    protocol: UDP
   # - name: syslog-tcp
   #   containerPort: 1514
   #   protocol: TCP
-  - name: beats
-    containerPort: 5044
-    protocol: TCP
+  # - name: beats
+  #   containerPort: 5044
+  #   protocol: TCP
   # - name: http
   #   containerPort: 8080
   #   protocol: TCP
@@ -170,7 +170,7 @@ exporter:
       successThreshold: 1
 
 elasticsearch:
-  host: elasticsearch-client.default.svc.cluster.local
+  host: efk-elasticsearch
   port: 9200
 
 ## ref: https://github.com/elastic/logstash-docker/blob/master/build/logstash/env2yaml/env2yaml.go
@@ -198,17 +198,17 @@ patterns:
 inputs:
   main: |-
     input {
-      # udp {
-      #   port => 1514
-      #   type => syslog
-      # }
+      udp {
+       port => 5141
+       type => syslog
+      }
       # tcp {
       #   port => 1514
       #   type => syslog
       # }
-      beats {
-        port => 5044
-      }
+      # beats {
+      #   port => 5044
+      # }
       # http {
       #   port => 8080
       # }
@@ -232,10 +232,8 @@ outputs:
     output {
       # stdout { codec => rubydebug }
       elasticsearch {
-        hosts => ["${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}"]
-        manage_template => false
-        index => "%{[@metadata][beat]}-%{+YYYY.MM.dd}"
-        document_type => "%{[@metadata][type]}"
+        hosts => ["efk-elasticsearch:9200"]
+        index => "logstash-opnsense-%{+YYYY.MM.dd}"
       }
       # kafka {
       #   ## ref: https://www.elastic.co/guide/en/logstash/current/plugins-outputs-kafka.html
